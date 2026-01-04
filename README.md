@@ -537,12 +537,6 @@ All outputs are organized by task with clear naming:
 ### Latent Representations (`data/processed/`)
 - `Z_vae.npy`, `Z_conv.npy`, `Z_cvae.npy`, `Z_betavae.npy`, `Z_autoencoder.npy`
 
-## Additional Documentation
-
-- `README_HARD.md` - Detailed Hard Task documentation
-- `COMPARISON_REQUIREMENTS.md` - Comparison requirements and evaluation criteria
-- `TASK_OUTPUTS.md` - Complete output file reference
-
 ## License
 
 This project is for educational/research purposes.
