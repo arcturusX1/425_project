@@ -5,3 +5,5 @@ matplotlib
 torch
 tqdm
 pandas
+# Optional: For real lyrics embeddings (install separately if needed)
+# sentence-transformers

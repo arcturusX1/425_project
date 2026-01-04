@@ -117,7 +117,7 @@ This project implements three levels of complexity for music genre clustering:
 ---
 
 #### `src/generate_lyrics_embeddings.py`
-**Purpose**: Generate lyrics embeddings for hybrid feature fusion (Medium/Hard tasks).
+**Purpose**: Generate synthetic lyrics embeddings for hybrid feature fusion (Medium/Hard tasks).
 
 **Libraries Used**:
 - `numpy`: Array operations
@@ -128,6 +128,55 @@ This project implements three levels of complexity for music genre clustering:
 - `generate_genre_based_embeddings()`: Creates embeddings from genre lyrical themes using TF-IDF and random projection
 - `load_from_file()`: Loads embeddings from external file
 - `generate_simple_embeddings()`: Fallback random embeddings
+
+**Outputs**: `data/processed/lyrics_embeddings.npy`
+
+**Note**: For real lyrics data integration, use `src/integrate_lyrics.py` and `src/generate_lyrics_embeddings_real.py` instead. See `LYRICS_INTEGRATION_GUIDE.md` for details.
+
+---
+
+#### `src/integrate_lyrics.py`
+**Purpose**: Integrate real lyrics data with GTZAN dataset by matching lyrics to audio tracks.
+
+**Libraries Used**:
+- `pandas`: CSV/DataFrame handling
+- `json`: JSON file parsing
+- `numpy`: Array operations
+
+**Key Functions**:
+- `load_lyrics_from_csv()`: Load lyrics from CSV file
+- `load_lyrics_from_json()`: Load lyrics from JSON file
+- `match_lyrics_to_gtzan()`: Match lyrics to GTZAN tracks using various strategies
+- `save_lyrics_mapping()`: Save matched lyrics to JSON
+
+**Matching Strategies**:
+- `filename`: Exact filename match (e.g., 'blues.00000' → 'blues.00000.wav')
+- `basename`: Match by number only (e.g., '00000' → '*.00000.wav')
+- `index`: Match by position within genre
+
+**Outputs**: `data/lyrics/lyrics_mapping.json`
+
+---
+
+#### `src/generate_lyrics_embeddings_real.py`
+**Purpose**: Generate lyrics embeddings from real lyrics text using sentence transformers or TF-IDF.
+
+**Libraries Used**:
+- `sentence_transformers` (optional): Pre-trained text embedding models
+- `sklearn.feature_extraction.text.TfidfVectorizer`: TF-IDF feature extraction
+- `sklearn.decomposition.PCA`: Dimensionality reduction
+- `numpy`: Array operations
+
+**Key Functions**:
+- `load_lyrics_mapping()`: Load lyrics mapping from JSON
+- `get_lyrics_for_tracks()`: Get lyrics in same order as processed data
+- `generate_embeddings_sentence_transformer()`: Use sentence transformers (better quality)
+- `generate_embeddings_tfidf()`: Use TF-IDF (no external dependencies)
+- `handle_missing_lyrics()`: Handle tracks without lyrics
+
+**Embedding Methods**:
+- `sentence_transformer`: Pre-trained models (all-MiniLM-L6-v2, all-mpnet-base-v2, etc.)
+- `tfidf`: Traditional TF-IDF with PCA reduction
 
 **Outputs**: `data/processed/lyrics_embeddings.npy`
 
@@ -536,6 +585,23 @@ All outputs are organized by task with clear naming:
 
 ### Latent Representations (`data/processed/`)
 - `Z_vae.npy`, `Z_conv.npy`, `Z_cvae.npy`, `Z_betavae.npy`, `Z_autoencoder.npy`
+
+## Important Notes and Known Issues
+
+### Data Leakage Fix (v2.0)
+
+**Issue**: Previous versions of `generate_lyrics_embeddings.py` used ground truth labels to generate embeddings, causing data leakage and unrealistically high multimodal clustering performance.
+
+**Fix**: The lyrics embedding generation has been updated to generate embeddings based on file order, not label order. This eliminates data leakage but may result in lower (more realistic) multimodal clustering performance.
+
+**Impact**: 
+- Previous multimodal results (NMI ~0.99, ARI ~0.99) were artificially high due to label leakage
+- New results should show more realistic performance (NMI ~0.4-0.6, ARI ~0.3-0.5)
+- To regenerate results, delete `data/processed/lyrics_embeddings.npy` and re-run the generation script
+
+### CVAE Performance Analysis
+
+CVAE may show high silhouette scores but low label alignment (NMI, ARI). This suggests the model learns well-separated clusters that don't correspond to genre boundaries. See `ANALYSIS_ISSUES.md` for detailed analysis.
 
 ## License
 

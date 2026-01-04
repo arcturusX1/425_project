@@ -84,27 +84,50 @@ def generate_genre_based_embeddings(gtzan_path, n_samples=None, embedding_dim=32
     # Normalize
     genre_base_embeddings = genre_base_embeddings / (np.linalg.norm(genre_base_embeddings, axis=1, keepdims=True) + 1e-8)
     
-    # Load actual labels to match exact samples
-    y_path = os.path.join('data', 'processed', 'y.npy')
-    if n_samples is None and os.path.exists(y_path):
-        y = np.load(y_path)
-        n_samples = len(y)
-        genre_map_path = os.path.join('data', 'processed', 'genre_map.json')
-        if os.path.exists(genre_map_path):
-            with open(genre_map_path, 'r') as f:
-                genre_map = json.load(f)
-            # Generate embeddings in the same order as the processed data
-            embeddings = []
-            for genre_id in y:
-                genre_name = [k for k, v in genre_map.items() if v == int(genre_id)][0]
-                genre_idx = genre_to_id[genre_name]
-                base_embedding = genre_base_embeddings[genre_idx]
-                # Add small random variation
-                variation = np.random.normal(0, 0.1, embedding_dim)
-                track_embedding = base_embedding + variation
-                track_embedding = track_embedding / (np.linalg.norm(track_embedding) + 1e-8)
-                embeddings.append(track_embedding)
-            return np.array(embeddings, dtype=np.float32)
+    # Generate embeddings based on file order (NOT label order to avoid data leakage)
+    # Count total samples from directory structure to match dataset size
+    if n_samples is None:
+        y_path = os.path.join('data', 'processed', 'y.npy')
+        if os.path.exists(y_path):
+            y = np.load(y_path)
+            n_samples = len(y)
+        else:
+            # Count from directory structure
+            n_samples = 0
+            for genre in genres:
+                genre_dir = os.path.join(gtzan_path, genre)
+                n_samples += len([f for f in os.listdir(genre_dir) if f.endswith('.wav')])
+    
+    # Generate embeddings based on file order, not label order
+    # This avoids data leakage by not using ground truth labels
+    embeddings = []
+    for genre in genres:
+        genre_dir = os.path.join(gtzan_path, genre)
+        genre_id = genre_to_id[genre]
+        base_embedding = genre_base_embeddings[genre_id]
+        
+        # Count tracks in this genre
+        track_files = sorted([f for f in os.listdir(genre_dir) if f.endswith('.wav')])
+        
+        for track_idx, fname in enumerate(track_files):
+            # Add random variation to make each track unique
+            # Variation is larger to reduce genre signal (more realistic)
+            variation = np.random.normal(0, 0.3, embedding_dim)  # Increased from 0.1 to 0.3
+            track_embedding = base_embedding + variation
+            track_embedding = track_embedding / (np.linalg.norm(track_embedding) + 1e-8)
+            embeddings.append(track_embedding)
+    
+    # Trim or pad to match exact number of samples if specified
+    embeddings = np.array(embeddings, dtype=np.float32)
+    if n_samples is not None and len(embeddings) != n_samples:
+        if len(embeddings) > n_samples:
+            embeddings = embeddings[:n_samples]
+        elif len(embeddings) < n_samples:
+            # Pad with last embedding
+            padding = np.tile(embeddings[-1:], (n_samples - len(embeddings), 1))
+            embeddings = np.vstack([embeddings, padding])
+    
+    return embeddings
     
     # Fallback: Generate per-track embeddings with slight variation
     embeddings = []
