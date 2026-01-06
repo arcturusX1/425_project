@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 import json
+import torch
+from cvae import CVAE
 
 
 def plot_latent_space(Z, y_true, y_pred, title, filename, method='tsne'):
@@ -258,6 +260,76 @@ def main():
                              'results/figures/hard_task_cluster_distribution.png')
     
     print("Visualization complete!")
+
+    # Attempt to load a trained CVAE model and generate reconstructions
+    # Prefer CVAE checkpoints; fall back to other VAE checkpoints if necessary.
+    try:
+        # Load input features for reconstruction (use original features X)
+        X_path = os.path.join('data', 'processed', 'X.npy')
+        if os.path.exists(X_path):
+            X = np.load(X_path)
+        else:
+            # If original features missing, try multimodal features or Z as proxy
+            fallback = os.path.join('data', 'processed', 'multimodal_features.npy')
+            if os.path.exists(fallback):
+                X = np.load(fallback)
+            else:
+                print("No suitable input features found for reconstructions. Skipping reconstructions.")
+                return
+
+        # Determine checkpoint path
+        results_dir = os.path.join('results')
+        ckpt_candidates = [
+            os.path.join(results_dir, 'cvae_best.pth'),
+            os.path.join(results_dir, 'cvae_final.pth'),
+            os.path.join(results_dir, 'vae_best.pth'),
+            os.path.join(results_dir, 'vae_final.pth')
+        ]
+        ckpt_path = None
+        for p in ckpt_candidates:
+            if os.path.exists(p):
+                ckpt_path = p
+                break
+
+        if ckpt_path is None:
+            print("No model checkpoint found in results/. Skipping reconstructions.")
+            return
+
+        # Prepare model instance matching data
+        input_dim = X.shape[1]
+        # try to infer latent dim from loaded Z if available
+        latent_dim = None
+        try:
+            if 'Z' in locals() and Z is not None:
+                latent_dim = Z.shape[1]
+        except Exception:
+            latent_dim = None
+        if latent_dim is None:
+            latent_dim = 10
+
+        n_classes = len(np.unique(y_true))
+        model = CVAE(input_dim=input_dim, latent_dim=latent_dim, n_classes=n_classes).to('cpu')
+
+        # Load state dict
+        state = torch.load(ckpt_path, map_location='cpu')
+        try:
+            model.load_state_dict(state)
+        except Exception:
+            # If the saved file contains a full model dict, attempt to load directly
+            try:
+                model = state
+            except Exception:
+                print(f"Failed to load model from {ckpt_path}. Skipping reconstructions.")
+                return
+
+        # Call reconstruction plotting
+        try:
+            plot_reconstructions(model, X, y_true, n_examples=8,
+                                 filename=os.path.join('results', 'figures', 'hard_task_reconstructions.png'))
+        except Exception as e:
+            print(f"Error during plotting reconstructions: {e}")
+    except Exception as e:
+        print(f"Reconstruction step skipped due to error: {e}")
 
 
 if __name__ == '__main__':

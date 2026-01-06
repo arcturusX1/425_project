@@ -545,6 +545,11 @@ python3 src/compare_hard_task.py --n-clusters 10
 python3 src/visualize_hard_task.py
 ```
 
+Note: `visualize_hard_task.py` attempts to load a trained CVAE (or other VAE) checkpoint
+from `results/` and will generate reconstruction example images in addition to latent-space
+and cluster-distribution plots when a compatible checkpoint (e.g. `cvae_best.pth` or
+`cvae_final.pth`) is available.
+
 ## Task Descriptions
 
 ### Easy Task
@@ -580,9 +585,13 @@ All outputs are organized by task with clear naming:
 - `easy_task_*.png` - Easy Task visualizations
 - `medium_task_*.png` - Medium Task visualizations
 - `hard_task_*.png` - Hard Task visualizations
+ - `hard_task_reconstructions.png` - Example original vs reconstructed feature plots (generated when a model checkpoint is available)
 
 ### Model Checkpoints (`results/`)
 - `vae_best.pth`, `conv_vae_best.pth`, `cvae_best.pth`, `betavae_best.pth`, `autoencoder_best.pth`
+
+Note: `src/visualize_hard_task.py` prefers `cvae_best.pth` / `cvae_final.pth` and will fall back
+to other VAE checkpoints when attempting to create reconstructions.
 
 ### Latent Representations (`data/processed/`)
 - `Z_vae.npy`, `Z_conv.npy`, `Z_cvae.npy`, `Z_betavae.npy`, `Z_autoencoder.npy`
