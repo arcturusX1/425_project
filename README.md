@@ -59,6 +59,7 @@ This project implements three levels of complexity for music genre clustering:
 
 ### Dataset
 - **GTZAN Genre Collection** : https://www.kaggle.com/datasets/carlthome/gtzan-genre-collection
+- [Google Drive link](https://drive.google.com/drive/folders/1TL98h6De3Fy7R_Pqcb9zkKt5_vv0Pj-F?usp=drive_link)
 - Download the dataset and extract the contents under data/gtzan to continue
 
 ## Project Structure
